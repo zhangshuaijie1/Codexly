@@ -26,6 +26,7 @@
 import type { AgentEngine } from "@codexly/protocol";
 
 const paths: Record<AgentEngine, string> = {
+  antigravity: "M12 2 23 21h-4l-2.4-4.2H7.4L5 21H1L12 2Zm0 7-2.8 4.8h5.6L12 9Z",
   codex:
     "M8 .5a6 6 0 0 1 3.1-.5q2.1.3 3.6 1.7h.1a6 6 0 0 1 4 .4h.1l.2.1a6 6 0 0 1 3.3 5.4l-.2 1.6v.2a6 6 0 0 1 1.7 2.8 6 6 0 0 1-1.2 5.2l-.2.2a6 6 0 0 1-3 1.9l-1 2a6 6 0 0 1-5 2.5 6 6 0 0 1-4.2-1.7h-.1l-1.6.1a6 6 0 0 1-2.6-.6A6 6 0 0 1 2.8 20l-.5-.8-.5-1.3a6 6 0 0 1 0-3v-.1a6 6 0 0 1-1.5-2.3L0 11l.2-2.1a6 6 0 0 1 4.2-4.3h.1a6 6 0 0 1 1.1-2.2A6 6 0 0 1 8.1.5m-.7 7.8a.8.8 0 0 0-1.5.8l1.7 3L5.8 15a.8.8 0 0 0 1.5.8l2-3.2a1 1 0 0 0 0-.9zm5.4 6.2a.8.8 0 0 0 0 1.7h4.9a.8.8 0 0 0 0-1.7z",
   claude:
@@ -36,7 +37,7 @@ export function AgentEngineIcon({ engine }: Readonly<{ engine: AgentEngine | und
   // 活动事件可能先于任务快照到达；预留同宽空间，避免误标品牌或补齐时标题跳动。
   if (engine === undefined) return <span aria-hidden="true" className="size-3.5 shrink-0" />;
 
-  const label = engine === "claude" ? "Claude" : "Codex";
+  const label = engine === "antigravity" ? "Antigravity" : engine === "claude" ? "Claude" : "Codex";
   return (
     <svg
       aria-label={label}

@@ -1,5 +1,9 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { AgentEngineSchema, ClaudeSettingsSchema } from "./agent-engine.js";
+import {
+  AgentEngineSchema,
+  AntigravityDefaultsSchema,
+  ClaudeSettingsSchema,
+} from "./agent-engine.js";
 import { AgentCapabilitiesSchema, AgentModelPageSchema } from "./agent-runtime.js";
 import {
   ConfigureCustomProviderRequestSchema,
@@ -22,6 +26,7 @@ export const AgentEngineProfileSchema = Type.Object(
     authType: ConfigureCustomProviderRequestSchema.properties.authType,
     configuredModels: ConfigureCustomProviderRequestSchema.properties.models,
     settings: Type.Optional(ClaudeSettingsSchema),
+    antigravityDefaults: Type.Optional(AntigravityDefaultsSchema),
     capabilities: AgentCapabilitiesSchema,
     models: AgentModelPageSchema,
     commands: Type.Array(AgentCommandSchema),

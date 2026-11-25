@@ -64,6 +64,7 @@ export type WorkbenchComposerHandle = Readonly<{
 export type WorkbenchComposerProps = Readonly<{
   engineControls?: ReactNode;
   engineCommands?: readonly AgentCommand[];
+  onOpenResume?: (() => void) | undefined;
   composerRef?: Ref<WorkbenchComposerHandle>;
   capabilities: AgentCapabilities | undefined;
   client: {
@@ -84,7 +85,7 @@ export type WorkbenchComposerProps = Readonly<{
   fastModeDefault: boolean;
   followUpBehavior: AgentGlobalSettings["followUpBehavior"];
   composerDraftId?: string;
-  initialEngine?: "codex" | "claude";
+  initialEngine?: import("@codexly/protocol").AgentEngine;
   initialDraft?: ComposerDraft;
   captureSubmitVisible?: boolean;
   footerVisible?: boolean;

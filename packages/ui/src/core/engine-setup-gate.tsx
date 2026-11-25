@@ -53,6 +53,7 @@ export function EngineSetupGate({
   storage = browserSetupStorage,
   language,
   claudeSupported = true,
+  antigravitySupported = false,
   prepare,
   check,
   discover,
@@ -62,6 +63,7 @@ export function EngineSetupGate({
   storage?: SetupStorage;
   language: string;
   claudeSupported?: boolean;
+  antigravitySupported?: boolean;
   prepare: (engine: AgentEngine, report: (message: string) => void) => Promise<void>;
   check: (engine: AgentEngine) => Promise<boolean>;
   discover: () => Promise<readonly AgentEngine[]>;
@@ -73,7 +75,10 @@ export function EngineSetupGate({
   const labels = language.startsWith("zh") ? copy.zh : copy.en;
   const [saved] = useState(() => readEngineSetup(storage.getItem(ENGINE_SETUP_KEY)));
   const [engines, setEngines] = useState<AgentEngine[]>(
-    saved?.engines.filter((engine) => engine === "codex" || claudeSupported) ?? [],
+    saved?.engines.filter(
+      (engine) =>
+        engine === "codex" || (engine === "claude" ? claudeSupported : antigravitySupported),
+    ) ?? [],
   );
   const [phase, setPhase] = useState<"loading" | "choose" | "prepare" | "configure" | "complete">(
     saved?.complete && engines.length ? "complete" : "loading",
@@ -95,7 +100,10 @@ export function EngineSetupGate({
       .then((result) => {
         if (!active) return;
         const restored =
-          result?.engines.filter((engine) => engine === "codex" || claudeSupported) ?? [];
+          result?.engines.filter(
+            (engine) =>
+              engine === "codex" || (engine === "claude" ? claudeSupported : antigravitySupported),
+          ) ?? [];
         if (result?.complete && restored.length) {
           storage.setItem(ENGINE_SETUP_KEY, JSON.stringify({ engines: restored, complete: true }));
           setEngines(restored);
@@ -108,7 +116,7 @@ export function EngineSetupGate({
     return () => {
       active = false;
     };
-  }, [saved, storage, claudeSupported, reload, labels.loadError]);
+  }, [saved, storage, claudeSupported, antigravitySupported, reload, labels.loadError]);
   const begin = async () => {
     if (inFlight.current || !engines.length) return;
     inFlight.current = true;
@@ -167,7 +175,7 @@ export function EngineSetupGate({
     phase === "choose"
       ? labels.choose
       : phase === "configure"
-        ? `${labels.configure} ${engine === "claude" ? "Claude" : "Codex"}`
+        ? `${labels.configure} ${engine === "antigravity" ? "Antigravity" : engine === "claude" ? "Claude" : "Codex"}`
         : phase === "loading"
           ? (error ?? labels.loading)
           : labels.prepare;
@@ -234,6 +242,12 @@ export function EngineSetupGate({
                     engines: ["codex", "claude"] as AgentEngine[],
                     allowed: claudeSupported,
                   },
+                  {
+                    title: "Antigravity",
+                    detail: "Google",
+                    engines: ["antigravity"] as AgentEngine[],
+                    allowed: antigravitySupported,
+                  },
                 ]
                   .filter((choice) => choice.allowed)
                   .map((choice) => (
@@ -283,7 +297,13 @@ export function EngineSetupGate({
                       className={`size-4 text-muted-foreground ${active === item && busy ? "motion-safe:animate-spin" : ""}`}
                     />
                   )}
-                  <span className="font-medium">{item === "claude" ? "Claude" : "Codex"}</span>
+                  <span className="font-medium">
+                    {item === "antigravity"
+                      ? "Antigravity"
+                      : item === "claude"
+                        ? "Claude"
+                        : "Codex"}
+                  </span>
                   <span className="ml-auto text-muted-foreground">
                     {ready.includes(item) ? labels.done : active === item ? progress : ""}
                   </span>

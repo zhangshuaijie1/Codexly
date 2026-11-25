@@ -214,9 +214,12 @@ export function ComposerConfigurationToolbar({
               ? "engine.permissions"
               : "composer.approvalMode",
           ),
-          control: <ComposerApprovalControls {...approvalProps} control="approval" />,
+          control:
+            props.activeSettings.engineOptions?.engine === "antigravity" ? null : (
+              <ComposerApprovalControls {...approvalProps} control="approval" />
+            ),
         },
-        ...(props.sandboxModeSelectable && props.activeSettings.engineOptions?.engine !== "claude"
+        ...(props.sandboxModeSelectable && !props.activeSettings.engineOptions
           ? [
               {
                 id: "sandbox",

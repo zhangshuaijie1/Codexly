@@ -4,6 +4,9 @@ import type {
   AgentGlobalApprovalPolicy,
   AgentGlobalSettings,
   AgentEngine,
+  AntigravityDefaults,
+  AntigravityConfig,
+  AntigravitySessionPage,
   AgentEngineProfile,
   ClaudeSettings,
   ClaudeExtensionKind,
@@ -58,6 +61,8 @@ import type {
 } from "@codexly/protocol";
 
 /** Provider 明确保证本次输入未提交；断线、超时或响应解析失败不得转换为此错误。 */
+export class AntigravitySessionRecoveryError extends Error {}
+
 export class AgentTurnNotSubmittedError extends Error {
   public constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -396,6 +401,15 @@ export interface AgentRuntimeProvider {
 }
 
 export interface AgentEngineService {
+  readAntigravityConfig?(): Promise<AntigravityConfig>;
+  writeAntigravityConfig?(config: AntigravityConfig): Promise<AntigravityConfig>;
+  listAntigravitySessions?(scope: AgentTaskScope, cursor?: string): Promise<AntigravitySessionPage>;
+  resumeAntigravitySession?(
+    scope: AgentTaskScope,
+    sessionId: string,
+    taskId?: string,
+  ): Promise<AgentTask>;
+  writeAntigravityDefaults?(defaults: AntigravityDefaults): Promise<AntigravityDefaults>;
   listExtensions?(kind: ClaudeExtensionKind, scope?: AgentTaskScope): Promise<ClaudeExtensionPage>;
   mutateExtension?(
     input: ClaudeExtensionMutation,
@@ -411,7 +425,7 @@ export interface AgentEngineService {
   generateCommitMessage?(prompt: string, model: string, instructions?: string): Promise<string>;
   readSettings(): Promise<ClaudeSettings>;
   writeSettings(settings: ClaudeSettings): Promise<ClaudeSettings>;
-  inspect(scope?: AgentTaskScope): Promise<AgentEngineProfile>;
+  inspect(scope?: AgentTaskScope, refresh?: boolean): Promise<AgentEngineProfile>;
   configure(input: ConfigureCustomProviderRequest): Promise<ConfigureCustomProviderResponse>;
   disconnect(): Promise<AgentProviderConnectionMutationResponse>;
 }

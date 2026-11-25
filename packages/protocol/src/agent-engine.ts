@@ -1,8 +1,50 @@
 import { Type, type Static } from "@sinclair/typebox";
+import type { AgentModel } from "./project-settings.js";
 
 /** 执行引擎与 API 服务商是两个概念；会话创建后引擎身份不可修改。 */
-export const AgentEngineSchema = Type.Union([Type.Literal("codex"), Type.Literal("claude")]);
+export const AgentEngineSchema = Type.Union([
+  Type.Literal("codex"),
+  Type.Literal("claude"),
+  Type.Literal("antigravity"),
+]);
 export type AgentEngine = Static<typeof AgentEngineSchema>;
+
+export const AntigravityDefaultsSchema = Type.Object(
+  {
+    model: Type.String({ minLength: 1, maxLength: 256 }),
+    reasoningEffort: Type.String({ maxLength: 64 }),
+  },
+  { additionalProperties: false },
+);
+export type AntigravityDefaults = Static<typeof AntigravityDefaultsSchema>;
+
+/** Earlier Codexly builds stored the native flat ID, with the effort as a suffix. */
+export function resolveAntigravitySelection(
+  models: readonly AgentModel[],
+  selection?: AntigravityDefaults,
+): AntigravityDefaults | undefined {
+  const exact = models.find((model) => model.id === selection?.model);
+  if (exact) {
+    const effort = exact.supportedReasoningEfforts.find(
+      ({ id }) => id === selection?.reasoningEffort,
+    );
+    return { model: exact.id, reasoningEffort: effort?.id ?? exact.defaultReasoningEffort };
+  }
+  if (selection) {
+    for (const model of models) {
+      const effort = model.supportedReasoningEfforts.find(
+        ({ id }) => `${model.id}-${id}` === selection.model,
+      );
+      if (effort) return { model: model.id, reasoningEffort: effort.id };
+    }
+  }
+  const fallback = models.find((model) => model.isDefault) ?? models[0];
+  return fallback && { model: fallback.id, reasoningEffort: fallback.defaultReasoningEffort };
+}
+
+export function isAgentEngine(value: unknown): value is AgentEngine {
+  return value === "codex" || value === "claude" || value === "antigravity";
+}
 
 /** Claude 只开放已支持映射的三档别名；两端与运行层共用固定名称，避免泄露映射后缀。 */
 export const CLAUDE_MODEL_OPTIONS = [
@@ -82,13 +124,20 @@ export const DEFAULT_CLAUDE_SETTINGS: ClaudeSettings = {
 };
 
 // 兼容既有 Codex 设置封套，但独立声明 Claude 原生权限；绝不从 sandboxMode 推导。
-export const AgentEngineOptionsSchema = Type.Object(
+const ClaudeEngineOptionsSchema = Type.Object(
   {
     engine: Type.Literal("claude"),
     permissionMode: ClaudePermissionModeSchema,
   },
   { additionalProperties: false },
 );
+export const AgentEngineOptionsSchema = Type.Union([
+  ClaudeEngineOptionsSchema,
+  Type.Object(
+    { engine: Type.Literal("antigravity"), permissionMode: Type.Optional(Type.Never()) },
+    { additionalProperties: false },
+  ),
+]);
 export type AgentEngineOptions = Static<typeof AgentEngineOptionsSchema>;
 
 /** 旧会话没有显式字段时沿用 Codex，不能使用当前草稿的选择推断历史归属。 */

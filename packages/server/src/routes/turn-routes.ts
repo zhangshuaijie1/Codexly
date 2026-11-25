@@ -148,7 +148,7 @@ export const registerTurnRoutes: FastifyPluginCallback<ServerRouteContext> = (
               throw new Error("Task creation recovery capacity is exhausted");
             }
             const defaults =
-              request.body.engine === "claude"
+              request.body.engine !== undefined && request.body.engine !== "codex"
                 ? undefined
                 : context.provider.readTaskMetadata === undefined
                   ? await readInheritedTaskSettings(request.params.projectId)

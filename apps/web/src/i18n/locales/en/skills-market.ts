@@ -7,6 +7,8 @@ export const skillsMarket = {
   projectMcpReadOnly:
     "The Codex API only supports editing global MCP configuration; project configuration is read-only",
   center: {
+    antigravityManaged: "Managed by the CLI or a plugin",
+    installedPlugins: "Installed plugins",
     selectProject: "Claude records MCP enablement separately for each project",
     engine: "Extension engine",
     documentation: "Documentation",

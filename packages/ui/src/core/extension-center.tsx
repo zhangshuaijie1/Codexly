@@ -27,6 +27,7 @@ export function ExtensionCenter({
   onSectionChange,
   t,
   codexContent,
+  antigravityClient,
 }: Readonly<{
   client: ClaudeExtensionClient;
   projects: readonly Readonly<{ id: string; name: string }>[];
@@ -34,11 +35,19 @@ export function ExtensionCenter({
   onSectionChange: (section: ClaudeExtensionKind) => void;
   t: ExtensionTranslate;
   codexContent: ReactNode;
+  antigravityClient?: ClaudeExtensionClient;
 }>) {
   const selectedEngines = useSelectedEngines();
-  const [engine, setEngine] = useState<"codex" | "claude">(() =>
-    selectedEngines?.length === 1 && selectedEngines[0] === "claude" ? "claude" : "codex",
+  const [engine, setEngine] = useState<"codex" | "claude" | "antigravity">(() =>
+    selectedEngines?.length === 1 && selectedEngines[0] === "claude"
+      ? "claude"
+      : antigravityClient && selectedEngines?.length === 1 && selectedEngines[0] === "antigravity"
+        ? "antigravity"
+        : "codex",
   );
+  const engines = antigravityClient
+    ? (["codex", "claude", "antigravity"] as const)
+    : (["codex", "claude"] as const);
   const [projectId, setProjectId] = useState("");
   const activeProject = projects.some((project) => project.id === projectId) ? projectId : "";
   return (
@@ -50,7 +59,7 @@ export function ExtensionCenter({
             role="group"
             aria-label={t("skillsMarket.center.engine")}
           >
-            {(["codex", "claude"] as const).map((value) => (
+            {engines.map((value) => (
               <button
                 key={value}
                 type="button"
@@ -59,7 +68,7 @@ export function ExtensionCenter({
                   setEngine(value);
                 }}
               >
-                {value === "codex" ? "Codex" : "Claude"}
+                {value === "codex" ? "Codex" : value === "claude" ? "Claude" : "Antigravity"}
               </button>
             ))}
           </div>
@@ -91,9 +100,11 @@ export function ExtensionCenter({
                 <a
                   className="extension-center__docs"
                   href={
-                    engine === "claude"
-                      ? `https://code.claude.com/docs/en/${section === "plugins" ? "discover-plugins" : section}`
-                      : `https://developers.openai.com/codex/${section === "plugins" ? "plugins" : section}`
+                    engine === "antigravity"
+                      ? `https://antigravity.google/docs/${section}?tab=cli`
+                      : engine === "claude"
+                        ? `https://code.claude.com/docs/en/${section === "plugins" ? "discover-plugins" : section}`
+                        : `https://developers.openai.com/codex/${section === "plugins" ? "plugins" : section}`
                   }
                   target="_blank"
                   rel="noreferrer"
@@ -141,7 +152,11 @@ export function ExtensionCenter({
                 }}
               >
                 <Icon aria-hidden="true" />
-                {t(`skillsMarket.tabs.${value}`)}
+                {t(
+                  engine === "antigravity" && value === "plugins"
+                    ? "skillsMarket.center.installedPlugins"
+                    : `skillsMarket.tabs.${value}`,
+                )}
               </button>
             ))}
           </div>
@@ -163,8 +178,9 @@ export function ExtensionCenter({
             </ExtensionProjectScope.Provider>
           ) : (
             <ClaudeExtensionsPane
-              key={`${section}:${activeProject}`}
-              client={client}
+              key={`${engine}:${section}:${activeProject}`}
+              client={engine === "antigravity" && antigravityClient ? antigravityClient : client}
+              engine={engine}
               kind={section}
               projectId={activeProject || undefined}
               t={t}

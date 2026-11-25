@@ -1,4 +1,4 @@
-import type { SavedPromptsRequest, SharedSavedPrompt } from "@codexly/protocol";
+import type { AgentEngine, SavedPromptsRequest, SharedSavedPrompt } from "@codexly/protocol";
 /** 应用目录与任务独立于执行引擎；sessionId 仅用于适配器恢复会话。 */
 export interface LocalProject {
   id: string;
@@ -23,7 +23,7 @@ export interface LocalTask {
 }
 
 export interface LocalTaskQuery {
-  providers?: readonly ("codex" | "claude")[];
+  providers?: readonly AgentEngine[];
   projectId?: string | null;
   archived?: boolean;
   completed?: boolean;
@@ -46,6 +46,10 @@ export interface CatalogOperations {
   "task.preview": [{ id: string; preview: string }, LocalTask];
   "task.recoverPreviews": [{ databasePath: string }, number];
   "task.bindings": [undefined, LocalTask[]];
+  "task.repairAntigravityBinding": [
+    { id: string; previousSessionId: string; sessionId: string },
+    LocalTask | null,
+  ];
   "task.patch": [
     Partial<Omit<LocalTask, "provider" | "projectId" | "preview">> & { id: string },
     LocalTask,

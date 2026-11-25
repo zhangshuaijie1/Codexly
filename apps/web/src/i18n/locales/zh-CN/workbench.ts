@@ -12,6 +12,17 @@ import { scheduledTasks } from "./scheduled-tasks.js";
 import { globalSearch } from "./global-search.js";
 
 export const workbench = {
+  antigravityResume: {
+    title: "加载 Antigravity 历史对话",
+    all: "选择一条本机对话，在原工作目录继续。",
+    project: "选择一条在当前项目工作目录下创建的对话。",
+    search: "搜索标题、路径或会话 ID",
+    repair: "用所选 CLI 会话修复当前聊天的失效绑定",
+    loading: "正在读取历史对话…",
+    empty: "没有匹配的历史对话",
+    importing: "正在加载对话…",
+    more: "加载更多",
+  },
   sidebarFooter: sidebarFooterChinese,
   engine: engineChinese,
   textEditor: textFileEditorChinese,

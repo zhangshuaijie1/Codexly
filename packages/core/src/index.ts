@@ -8,6 +8,7 @@ export {
 export { searchTextMatches, searchTextSnippet } from "./search-text.js";
 export {
   AgentTurnNotSubmittedError,
+  AntigravitySessionRecoveryError,
   type AgentCancellationSignal,
   type AgentModelCatalogFallback,
   type AgentFileSearchInput,

@@ -5,6 +5,11 @@ export function searchEngineFilter(
   engines: readonly AgentEngine[] | undefined,
 ): TaskSearchQuery["engines"] {
   if (!engines) return undefined;
+  if (engines.includes("antigravity")) {
+    if (engines.includes("codex"))
+      return engines.includes("claude") ? "codex,claude,antigravity" : "codex,antigravity";
+    return engines.includes("claude") ? "claude,antigravity" : "antigravity";
+  }
   if (engines.includes("codex") && engines.includes("claude")) return "codex,claude";
   return engines.includes("claude") ? "claude" : "codex";
 }

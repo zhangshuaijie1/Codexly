@@ -26,7 +26,7 @@ export interface ConversationRecord {
   version: 1;
   exportedAt: string;
   task: Pick<ExportSnapshot, "id" | "projectId" | "title" | "status" | "updatedAt"> & {
-    engine: "codex" | "claude";
+    engine: import("@codexly/protocol").AgentEngine;
   };
   turns: Omit<ExportTurn, "processCursor">[];
 }

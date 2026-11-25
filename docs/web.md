@@ -64,6 +64,28 @@ npx --package @bryanhu/codexly@latest codexly start --lan
 
 多实例启动会跳过占用端口。启动目录不决定应用数据目录；临时任务默认使用用户主目录，或第一个显式 `--workspace` 根目录。`--codex-home` 只隔离 Codex 自身的数据，不隔离共享的 Codexly 应用目录。
 
+### 使用 Antigravity CLI
+
+从此源码构建本地 Web 版，安装 Node.js 24、pnpm 和支持 ACP 的 Antigravity CLI（`agy` 1.5.0 或更新版本），然后在仓库目录运行：
+
+```bash
+agy --version
+agy acp --login
+pnpm install --frozen-lockfile
+pnpm build
+node dist/cli.js start --no-open --port 7654
+```
+
+已有 CLI 登录时可跳过登录步骤。在浏览器打开 `http://127.0.0.1:7654`，新建聊天并选择 **Antigravity**。只有这一个引擎可用时，新聊天会直接使用它。Codexly 使用当前运行账户的 Antigravity CLI 凭据，`agy` 沿用启动终端的网络环境。如果终端找不到 `agy`，可把 `CODEXLY_AGY_PATH` 设为可执行文件的绝对路径后再启动。
+
+聊天输入框先选模型，再选该模型支持的思考程度。到「全局设置 → Antigravity → Antigravity 设置」可以重新检测 CLI 连接，或保存新聊天的默认模型和思考程度。
+
+Web 聊天支持流式回复、停止回合、单次工具审批和恢复会话。审批和原生权限遵循 Antigravity CLI 配置。它也接受图片和文本输入。Codexly 的展示历史保存在 `~/.codexly/engines/antigravity`，原生对话上下文由 Antigravity CLI 保存。
+
+在 Antigravity 聊天输入 `/resume` 并按 Enter，可按标题、工作目录或会话 ID 选择原生会话。项目聊天中按项目目录筛选，临时聊天中可查看本机多个目录的会话。首次打开时把已收到的用户与助手文本载入网页，继续发送会沿用原生上下文，包含 CLI 保存的工具执行语境。已打开过的会话会复用对应的 Codexly 聊天。
+
+在「扩展中心 → Antigravity」可以查看 Skills、MCP 和已安装插件。工作区配置通过「作用范围」选择项目。切换本地可管理的 Skill 会保留内容并切换 `SKILL.md` 的文件名，MCP 开关更新其原生配置里的 `disabled`，插件开关调用 `agy plugin enable/disable`。内置及由插件管理的扩展显示其状态。终端中的现有会话可用 `/skills reload` 更新 Skills 列表，重新打开会话可载入最新扩展配置。
+
 ## 登录后后台启动
 
 需要稳定的全局 npm 安装，临时 `npx` 安装不能登记系统登录项。支持 macOS、Windows，以及提供 systemd 用户管理器的 Ubuntu。

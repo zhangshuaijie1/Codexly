@@ -13,7 +13,11 @@ export function createEngineActivation(
 ) {
   let snapshot: EngineActivationSnapshot = {
     engines: initial,
-    states: { codex: { phase: "idle", message: "" }, claude: { phase: "idle", message: "" } },
+    states: {
+      codex: { phase: "idle", message: "" },
+      claude: { phase: "idle", message: "" },
+      antigravity: { phase: "idle", message: "" },
+    },
   };
   const listeners = new Set<() => void>();
   const pending = new Map<AgentEngine, Promise<void>>();

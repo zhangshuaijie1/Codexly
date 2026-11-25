@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CodexlyClient } from "@codexly/client";
 import type { AgentEngine, AgentTaskSettings } from "@codexly/protocol";
+import { resolveAntigravitySelection } from "@codexly/protocol";
 import {
   resolveClaudeComposerSettings,
   resolveCodexComposerSettings,
@@ -13,19 +14,25 @@ import { useEngineComposerState } from "@codexly/ui/core/engine-composer-state";
 import { useTranslation } from "../../../i18n/i18n.js";
 import { providerConnectionQueryOptions } from "../../provider-connection/provider-connection-queries.js";
 import { WorkbenchComposerBase } from "./workbench-composer-base.js";
+import { AntigravityResumeDialog } from "./antigravity-resume-dialog.js";
 import type { WorkbenchComposerProps } from "./workbench-composer-contracts.js";
 export * from "./workbench-composer-contracts.js";
 export * from "../composer-state.js";
 
 type EngineClient = Pick<
   CodexlyClient,
-  "getEngineProfile" | "configureEngine" | "updateTaskSettings"
+  | "getEngineProfile"
+  | "configureEngine"
+  | "updateTaskSettings"
+  | "listAntigravitySessions"
+  | "resumeAntigravitySession"
 >;
 const emptyModels = [] as const;
 
 export function WorkbenchComposer(props: WorkbenchComposerProps) {
   const { t } = useTranslation("workbench");
   const queryClient = useQueryClient();
+  const [resumeScope, setResumeScope] = useState<string>();
   const selectedEngines = useSelectedEngines();
   const codexEnabled = selectedEngines?.includes("codex") ?? true;
   const connection = useQuery({ ...providerConnectionQueryOptions(), enabled: codexEnabled });
@@ -50,6 +57,18 @@ export function WorkbenchComposer(props: WorkbenchComposerProps) {
   );
   // 只订阅缓存，发现请求仍由共享状态触发；会话正在使用的配置不能被空闲 GC 回收。
   useQuery({ ...engineProfileQuery(readProfile, "claude", props.projectId), enabled: false });
+  const agyProfileQuery = useQuery({
+    queryKey: ["engine-profile", "antigravity"],
+    queryFn: () =>
+      client.getEngineProfile?.("antigravity") ??
+      Promise.reject(new Error("Engine service unavailable")),
+    staleTime: 30_000,
+    enabled: !props.onCaptureSubmission || props.initialEngine === "antigravity",
+    retry: false,
+  });
+  const agyProfile =
+    agyProfileQuery.data?.engine === "antigravity" ? agyProfileQuery.data : undefined;
+  const agyAvailable = agyProfile?.connection.state === "connected";
   const invalidateProfile = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["engine-profile"], refetchType: "none" });
   }, [queryClient]);
@@ -62,6 +81,7 @@ export function WorkbenchComposer(props: WorkbenchComposerProps) {
     taskEngine: props.runtime?.metadata?.engine,
     ...(props.initialEngine === undefined ? {} : { initialEngine: props.initialEngine }),
     codexConfigured: connection.isPending ? undefined : connection.data?.state === "connected",
+    antigravityAvailable: agyAvailable,
     load,
   });
   const [override, setOverride] = useState<
@@ -72,33 +92,65 @@ export function WorkbenchComposer(props: WorkbenchComposerProps) {
       : undefined,
   );
   const claude = state.engine === "claude";
+  const agy = state.engine === "antigravity";
+  const canResume =
+    agy &&
+    !props.onCaptureSubmission &&
+    client.listAntigravitySessions &&
+    client.resumeAntigravitySession;
   const models = state.pending
     ? emptyModels
     : claude
       ? (state.profile?.models.data ?? emptyModels)
-      : props.models;
-  const settings = claude
-    ? resolveClaudeComposerSettings(
-        override?.scope === scope ? override.settings : props.settings,
-        models,
-        state.profile?.settings,
-      )
-    : resolveCodexComposerSettings(props.settings, props.models);
+      : agy
+        ? (agyProfile?.models.data ?? emptyModels)
+        : props.models;
+  const agySettings = override?.scope === scope ? override.settings : props.settings;
+  const agySelection = resolveAntigravitySelection(
+    agyProfile?.models.data ?? emptyModels,
+    agySettings.engineOptions?.engine === "antigravity"
+      ? agySettings
+      : agyProfile?.antigravityDefaults,
+  );
+  const settings: AgentTaskSettings = agy
+    ? agySettings.engineOptions?.engine === "antigravity"
+      ? { ...agySettings, ...agySelection }
+      : {
+          model: "",
+          reasoningEffort: "",
+          ...agySelection,
+          approvalPolicy: "on-request",
+          approvalsReviewer: "user",
+          sandboxMode: "workspace-write",
+          engineOptions: { engine: "antigravity" },
+        }
+    : claude
+      ? resolveClaudeComposerSettings(
+          override?.scope === scope ? override.settings : props.settings,
+          models,
+          state.profile?.settings,
+        )
+      : resolveCodexComposerSettings(props.settings, props.models);
   const controls = (
     <>
-      {/* 单引擎直接跳过选择器组件，避免执行其内部渲染与交互逻辑。 */}
-      {selectedEngines?.length !== 1 && state.codexConfigured && state.claudeConfigured ? (
+      {Number(state.codexConfigured) + Number(state.claudeConfigured) + Number(agyAvailable) >
+        1 && (
         <AgentEngineSelector
           codexAvailable={state.codexConfigured}
           claudeAvailable={state.claudeConfigured}
+          antigravityAvailable={agyAvailable}
           label={t("engine.select")}
           value={state.engine}
           locked={state.locked}
           disabled={state.submitting}
           onChange={state.select}
         />
-      ) : null}
-      {claude && state.profile?.connection.state === "disconnected" ? (
+      )}
+      {agy && agyProfile?.connection.state === "disconnected" ? (
+        <span role="status" className="text-meta text-muted-foreground">
+          Antigravity CLI：agy acp --login
+        </span>
+      ) : claude && state.profile?.connection.state === "disconnected" ? (
         <span role="status" className="text-meta text-muted-foreground">
           {t("engine.configureInSettings")}
         </span>
@@ -106,28 +158,63 @@ export function WorkbenchComposer(props: WorkbenchComposerProps) {
     </>
   );
   return (
-    <WorkbenchComposerBase
-      {...props}
-      engineControls={controls}
-      {...(claude ? { engineCommands: state.profile?.commands ?? [] } : {})}
-      models={models}
-      modelsPending={state.pending || (!claude && props.modelsPending)}
-      modelsError={claude ? (state.error ?? null) : props.modelsError}
-      capabilities={claude ? state.profile?.capabilities : props.capabilities}
-      settings={settings}
-      skills={claude ? [] : props.skills}
-      fastModeAvailable={!claude && props.fastModeAvailable}
-      followUpBehavior={props.followUpBehavior}
-      onSubmissionStateChange={(submitting) => {
-        state.setSubmitting(submitting);
-        props.onSubmissionStateChange?.(submitting);
-      }}
-      onSettingsChange={async (next, field, fastMode) => {
-        if (!claude) return props.onSettingsChange(next, field, fastMode);
-        if (props.taskId && client.updateTaskSettings)
-          await client.updateTaskSettings(props.projectId, props.taskId, next);
-        setOverride({ scope, settings: next });
-      }}
-    />
+    <>
+      <WorkbenchComposerBase
+        {...props}
+        engineControls={controls}
+        {...(claude
+          ? { engineCommands: state.profile?.commands ?? [] }
+          : agy
+            ? {
+                engineCommands: canResume
+                  ? [
+                      {
+                        name: "resume",
+                        description: t("antigravityResume.title"),
+                        argumentHint: "",
+                      },
+                    ]
+                  : [],
+                onOpenResume: canResume ? () => setResumeScope(scope) : undefined,
+              }
+            : {})}
+        models={models}
+        modelsPending={
+          state.pending || (agy ? agyProfileQuery.isPending : !claude && props.modelsPending)
+        }
+        modelsError={
+          agy ? (agyProfileQuery.error ?? null) : claude ? (state.error ?? null) : props.modelsError
+        }
+        capabilities={
+          agy ? agyProfile?.capabilities : claude ? state.profile?.capabilities : props.capabilities
+        }
+        settings={settings}
+        skills={claude || agy ? [] : props.skills}
+        fastModeAvailable={!claude && !agy && props.fastModeAvailable}
+        followUpBehavior={props.followUpBehavior}
+        onSubmissionStateChange={(submitting) => {
+          state.setSubmitting(submitting);
+          props.onSubmissionStateChange?.(submitting);
+        }}
+        onSettingsChange={async (next, field, fastMode) => {
+          if (!claude && !agy) return props.onSettingsChange(next, field, fastMode);
+          if (props.taskId && client.updateTaskSettings)
+            await client.updateTaskSettings(props.projectId, props.taskId, next);
+          setOverride({ scope, settings: next });
+        }}
+      />
+      {canResume && resumeScope === scope && (
+        <AntigravityResumeDialog
+          client={{
+            listAntigravitySessions: client.listAntigravitySessions!.bind(client),
+            resumeAntigravitySession: client.resumeAntigravitySession!.bind(client),
+          }}
+          projectId={props.projectId}
+          taskId={props.taskId}
+          onClose={() => setResumeScope(undefined)}
+          onResume={props.onTaskStarted}
+        />
+      )}
+    </>
   );
 }

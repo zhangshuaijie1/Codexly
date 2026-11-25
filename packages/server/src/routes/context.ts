@@ -162,7 +162,9 @@ export interface ServerRouteContext {
   readonly fingerprintPayload: (payload: unknown) => string;
   readonly idempotencyCacheSize: number;
   readonly installAppUpdate: (version: string) => Promise<InstallAppUpdateResponse>;
-  readonly listModels: (engine?: "codex" | "claude") => Promise<readonly AgentModel[]>;
+  readonly listModels: (
+    engine?: import("@codexly/protocol").AgentEngine,
+  ) => Promise<readonly AgentModel[]>;
   readonly maximumAttachmentBytes: (kind: AgentAttachmentKind) => number;
   readonly modelCatalogCache: Readonly<{
     clear: () => void;

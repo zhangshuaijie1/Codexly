@@ -136,6 +136,14 @@ export function createLocalCatalogOperations(db) {
     },
     "task.recoverPreviews": ({ databasePath }) => recoverTaskPreviews(db, databasePath),
     "task.bindings": () => db.prepare(TASK_PREVIEW_SELECT).all().map(task),
+    "task.repairAntigravityBinding": db.transaction(({ id, previousSessionId, sessionId }) => {
+      const result = db.prepare(
+        `UPDATE managed_tasks SET session_id=?
+         WHERE id=? AND provider='antigravity' AND session_id=? AND archived=0 AND status<>'active'
+         AND NOT EXISTS (SELECT 1 FROM managed_tasks WHERE provider='antigravity' AND session_id=?)`,
+      ).run(sessionId, id, previousSessionId, sessionId);
+      return result.changes ? readTask(id) : null;
+    }),
     "task.patch": ({ id, ...patch }) => {
       const current = readTask(id);
       if (!current) throw new Error("Task not found");
@@ -181,8 +189,8 @@ export function createLocalCatalogOperations(db) {
       if (input.providers !== undefined) {
         if (
           !Array.isArray(input.providers) ||
-          input.providers.length > 2 ||
-          input.providers.some((provider) => provider !== "codex" && provider !== "claude")
+          input.providers.length > 3 ||
+          input.providers.some((provider) => !["codex", "claude", "antigravity"].includes(provider))
         )
           throw new Error("Invalid task providers");
         where.push(`provider IN (${input.providers.map(() => "?").join(",")})`);

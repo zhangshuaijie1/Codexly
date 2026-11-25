@@ -250,6 +250,11 @@ export function useWorkbenchShellController(
       checkpoint?: EventCheckpoint,
     ) => {
       cacheProjectTask(startedTask);
+      if (startedTask.engine === "antigravity" && startedTurn === undefined) {
+        void queryClient.invalidateQueries({
+          queryKey: taskSnapshotQueryOptions(startedTask.projectId, startedTask.id, client).queryKey,
+        });
+      }
       if (
         startedTurn !== undefined &&
         startedInput !== undefined &&
@@ -286,10 +291,10 @@ export function useWorkbenchShellController(
       // 分屏中的继续执行与 Fork 只更新所属窗口，不能触发整页导航清空其他聊天。
       if (navigateSplitTask(startedTask.projectId, startedTask.id)) return;
       void navigate({
-        ...(temporary
+        ...(startedTask.projectId === "temporary"
           ? { params: { taskId: startedTask.id }, to: "/temporary/t/$taskId" as const }
           : {
-              params: { projectId, taskId: startedTask.id },
+              params: { projectId: startedTask.projectId, taskId: startedTask.id },
               to: "/p/$projectId/t/$taskId" as const,
             }),
       });

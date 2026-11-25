@@ -1,12 +1,12 @@
 import { useSelectedEngines } from "./engine-selection.js";
 import { useCallback, useEffect, useState } from "react";
-import type { AgentEngine, AgentEngineProfile } from "@codexly/protocol";
+import { isAgentEngine, type AgentEngine, type AgentEngineProfile } from "@codexly/protocol";
 import { resolveComposerEngine } from "@codexly/frontend-core/engine-composer";
 
 function readDraftEngine(scope: string, fallback: AgentEngine = "codex"): AgentEngine {
   try {
     const saved = localStorage.getItem(`codexly:engine-draft:v1:${scope}`);
-    return saved === "claude" || saved === "codex" ? saved : fallback;
+    return isAgentEngine(saved) ? saved : fallback;
   } catch {
     return fallback;
   }
@@ -24,12 +24,15 @@ export function useEngineComposerState(
     initialEngine?: AgentEngine;
     codexConfigured: boolean | undefined;
     claudeSupported?: boolean;
+    antigravityAvailable?: boolean;
     load: (engine: AgentEngine) => Promise<AgentEngineProfile>;
   }>,
 ) {
   const selectedEngines = useSelectedEngines();
   const preferredEngine = selectedEngines?.[0] ?? "codex";
-  const singleEngine = selectedEngines?.length === 1 ? selectedEngines[0] : undefined;
+  const antigravityConfigured = input.antigravityAvailable === true;
+  const singleEngine =
+    selectedEngines?.length === 1 && !antigravityConfigured ? selectedEngines[0] : undefined;
   const claudeSupported =
     input.claudeSupported !== false && (selectedEngines?.includes("claude") ?? true);
   const [selection, setSelection] = useState(() => ({
@@ -75,7 +78,7 @@ export function useEngineComposerState(
           input.taskId,
           input.taskEngine === undefined ? undefined : { engine: input.taskEngine },
           draftEngine,
-          { codex: codexConfigured, claude: claudeConfigured },
+          { codex: codexConfigured, claude: claudeConfigured, antigravity: antigravityConfigured },
           input.initialEngine !== undefined ||
             (input.taskId === undefined && claudeSupported && profile === undefined),
         );
@@ -84,6 +87,7 @@ export function useEngineComposerState(
     input.taskId === undefined &&
     input.initialEngine === undefined &&
     selectedEngines &&
+    !(resolvedEngine === "antigravity" && antigravityConfigured) &&
     !selectedEngines.includes(resolvedEngine)
       ? preferredEngine
       : resolvedEngine;
@@ -113,8 +117,9 @@ export function useEngineComposerState(
         singleEngine !== undefined ||
         input.taskId !== undefined ||
         submitting ||
-        !codexConfigured ||
-        !claudeConfigured
+        (engine === "codex" && !codexConfigured) ||
+        (engine === "claude" && !claudeConfigured) ||
+        (engine === "antigravity" && !antigravityConfigured)
       )
         return;
       setSelection({ scope: input.scope, engine });
@@ -124,7 +129,15 @@ export function useEngineComposerState(
         /* 存储不可用时仍保留当前草稿内的选择。 */
       }
     },
-    [singleEngine, input.scope, input.taskId, submitting, codexConfigured, claudeConfigured],
+    [
+      singleEngine,
+      input.scope,
+      input.taskId,
+      submitting,
+      codexConfigured,
+      claudeConfigured,
+      antigravityConfigured,
+    ],
   );
   return {
     engine,

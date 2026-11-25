@@ -3,6 +3,7 @@ import { EngineSelectionProvider } from "@codexly/ui/core/engine-selection-provi
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { browserSetupStorage } from "@codexly/ui/core/engine-selection";
 import { ENGINE_SETUP_KEY, readEngineSetup } from "@codexly/frontend-core/engine-setup";
+import { useQuery } from "@tanstack/react-query";
 const SharedEngineSetupGate = lazy(() =>
   import("@codexly/ui/core/engine-setup-gate").then((module) => ({
     default: module.EngineSetupGate,
@@ -27,10 +28,23 @@ export function EngineSetupGate({ children }: Readonly<{ children: ReactNode }>)
   const { t } = useTranslation("settings");
   const language = getCurrentLanguage();
   const [saved] = useState(() => readEngineSetup(browserSetupStorage.getItem(ENGINE_SETUP_KEY)));
+  const antigravity = useQuery({
+    queryKey: ["engine-profile", "antigravity"],
+    queryFn: () => codexlyClient.getEngineProfile("antigravity"),
+    enabled: saved?.complete === true,
+    retry: false,
+    staleTime: 30_000,
+  });
   // 已完成向导的启动不加载配置界面，保持工作区首屏依赖与内存占用有界。
   if (saved?.complete)
     return (
-      <EngineSelectionProvider engines={saved.engines} storage={browserSetupStorage}>
+      <EngineSelectionProvider
+        engines={saved.engines}
+        storage={browserSetupStorage}
+        additionalEngine={
+          antigravity.data?.connection.state === "connected" ? "antigravity" : undefined
+        }
+      >
         {children}
       </EngineSelectionProvider>
     );
@@ -41,8 +55,9 @@ export function EngineSetupGate({ children }: Readonly<{ children: ReactNode }>)
           const results = await Promise.allSettled([
             codexlyClient.getProviderConnection(),
             codexlyClient.getEngineProfile("claude").then((profile) => profile.connection),
+            codexlyClient.getEngineProfile("antigravity").then((profile) => profile.connection),
           ]);
-          const engines = (["codex", "claude"] as const).filter((_, index) => {
+          const engines = (["codex", "claude", "antigravity"] as const).filter((_, index) => {
             const result = results[index];
             return (
               result?.status === "fulfilled" &&
@@ -55,20 +70,34 @@ export function EngineSetupGate({ children }: Readonly<{ children: ReactNode }>)
           return engines;
         }}
         language={language}
+        antigravitySupported
         prepare={async (engine, report) => {
           // Web 引擎由服务端包提供；浏览器只检查选中的引擎，不重复下载桌面二进制。
           report(language === "zh-CN" ? "正在准备" : "Preparing");
-          if (engine === "claude") await codexlyClient.getClaudeSettings();
+          if (engine === "antigravity") await codexlyClient.getEngineProfile(engine);
+          else if (engine === "claude") await codexlyClient.getClaudeSettings();
           else await codexlyClient.getProviderConnection();
         }}
         check={async (engine) =>
-          engine === "claude"
-            ? (await codexlyClient.getEngineProfile("claude")).connection.state === "connected"
+          engine !== "codex"
+            ? (await codexlyClient.getEngineProfile(engine)).connection.state === "connected"
             : (await codexlyClient.getProviderConnection()).state === "connected"
         }
         renderConfiguration={(engine, actions) => (
           <Suspense fallback={<p role="status">{t("provider.loading")}</p>}>
-            {engine === "claude" ? (
+            {engine === "antigravity" ? (
+              <div className="space-y-4">
+                <p>
+                  {language === "zh-CN"
+                    ? "在运行 Codexly 的电脑上登录 Antigravity CLI，然后继续。"
+                    : "Sign in to Antigravity CLI on the Codexly host, then continue."}
+                </p>
+                <pre>agy acp --login</pre>
+                <button type="button" onClick={actions.onConnected}>
+                  {actions.continueLabel}
+                </button>
+              </div>
+            ) : engine === "claude" ? (
               <ClaudeSettingsPanel client={codexlyClient} section="claude-provider" {...actions} />
             ) : (
               <ProviderConnectionPanel {...actions} />

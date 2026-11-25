@@ -6,6 +6,7 @@ export function AgentEngineSelector(
   props: Readonly<{
     codexAvailable: boolean;
     claudeAvailable: boolean;
+    antigravityAvailable?: boolean;
     value: AgentEngine;
     locked: boolean;
     disabled?: boolean;
@@ -14,17 +15,18 @@ export function AgentEngineSelector(
   }>,
 ) {
   // 已有聊天的引擎不可切换，直接隐藏入口；只有双引擎可用的新聊天需要选择器。
-  if (props.locked || !props.codexAvailable || !props.claudeAvailable) return null;
+  const options: { value: AgentEngine; label: string }[] = [];
+  if (props.codexAvailable) options.push({ value: "codex", label: "Codex" });
+  if (props.claudeAvailable) options.push({ value: "claude", label: "Claude" });
+  if (props.antigravityAvailable) options.push({ value: "antigravity", label: "Antigravity" });
+  if (props.locked || options.length < 2) return null;
   return (
     <CompactSelector
       label={props.label}
       disabled={props.disabled === true}
       value={props.value}
       onValueChange={props.onChange}
-      options={[
-        { value: "codex", label: "Codex" },
-        { value: "claude", label: "Claude" },
-      ]}
+      options={options}
     />
   );
 }

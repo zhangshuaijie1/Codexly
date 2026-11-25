@@ -12,6 +12,17 @@ import { scheduledTasks } from "./scheduled-tasks.js";
 import { globalSearch } from "./global-search.js";
 
 export const workbench = {
+  antigravityResume: {
+    title: "Resume an Antigravity conversation",
+    all: "Select a local conversation to continue in its original working directory.",
+    project: "Select a conversation from the current project.",
+    search: "Search titles, paths, or session IDs",
+    repair: "Repair the current chat’s broken connection with the selected CLI conversation",
+    loading: "Loading conversations…",
+    empty: "No matching conversations",
+    importing: "Loading conversation…",
+    more: "Load more",
+  },
   sidebarFooter: sidebarFooterEnglish,
   engine: engineEnglish,
   textEditor: textFileEditorEnglish,

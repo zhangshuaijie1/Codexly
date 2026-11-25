@@ -14,6 +14,8 @@ export const skillsMarket = {
     project: "项目共享",
     local: "项目私有",
     managed: "组织管理",
+    antigravityManaged: "由 CLI 或插件管理",
+    installedPlugins: "已安装插件",
     search: "搜索名称或描述…",
     syncCatalog: "同步官方目录",
     refresh: "刷新列表",

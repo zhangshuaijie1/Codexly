@@ -18,8 +18,12 @@ import { useTranslation } from "../../../i18n/i18n.js";
 import { PromptInputSelect } from "../../../shared/components/agent/prompt-input.js";
 import { Checkbox } from "../../../shared/components/core/checkbox.js";
 
-export type { SettingsSectionId } from "@codexly/frontend-core/settings-navigation";
-import type { SettingsSectionId } from "@codexly/frontend-core/settings-navigation";
+import type { SettingsSectionId as SharedSettingsSectionId } from "@codexly/frontend-core/settings-navigation";
+export type SettingsSectionId =
+  | SharedSettingsSectionId
+  | "antigravity-provider"
+  | "antigravity-agent"
+  | "antigravity-personalization";
 
 export const settingsSections: readonly Readonly<{
   icon: LucideIcon;
@@ -33,6 +37,9 @@ export const settingsSections: readonly Readonly<{
   { icon: ServerCog, id: "claude-provider" },
   { icon: Bot, id: "claude-agent" },
   { icon: SlidersHorizontal, id: "claude-personalization" },
+  { icon: ServerCog, id: "antigravity-provider" },
+  { icon: Bot, id: "antigravity-agent" },
+  { icon: SlidersHorizontal, id: "antigravity-personalization" },
   { icon: Bot, id: "agent" },
   { icon: SlidersHorizontal, id: "personalization" },
   { icon: Network, id: "access" },

@@ -97,6 +97,9 @@ export type CodexlySettingsClient = Pick<
   | "diagnosticsDownloadUrl"
   | "listWorkbenchBackgrounds"
   | "getEngineProfile"
+  | "updateAntigravityDefaults"
+  | "getAntigravityConfig"
+  | "updateAntigravityConfig"
   | "configureEngine"
   | "disconnectEngine"
   | "getClaudeSettings"
@@ -172,7 +175,14 @@ export type CodexlyWorkbenchClient = Pick<
 > &
   Pick<
     CodexlyClient,
-    "listTaskCatalog" | "queryCompletedTasks" | "listClaudeExtensions" | "mutateClaudeExtension"
+    | "listTaskCatalog"
+    | "queryCompletedTasks"
+    | "listClaudeExtensions"
+    | "mutateClaudeExtension"
+    | "listAntigravityExtensions"
+    | "mutateAntigravityExtension"
+    | "listAntigravitySessions"
+    | "resumeAntigravitySession"
   > &
   CodexlyReadClient &
   CodexlyBackgroundTerminalClient &

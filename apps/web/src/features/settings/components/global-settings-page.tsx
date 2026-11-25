@@ -5,6 +5,7 @@ import { DefaultGenerationSettings } from "@codexly/ui/core/default-generation-s
 import { useSettingsAutosave } from "@codexly/ui/core/use-settings-autosave";
 import { SettingsSaveStatus } from "@codexly/ui/core/settings-save-status";
 import { isClaudeSettingsSection } from "@codexly/frontend-core/settings-navigation";
+import { AntigravitySettingsPanel } from "./antigravity-settings-panel.js";
 import type { AgentGlobalSettings } from "@codexly/protocol";
 import { lazy, Suspense, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { changeAppLanguage, getCurrentLanguage, useTranslation } from "../../../i18n/i18n.js";
@@ -204,6 +205,16 @@ export function GlobalSettingsPage({
             language={language}
             projects={projectData?.projects}
             projectsUnavailable={!projectData || projectData.isPending || !!projectData.error}
+          />
+        ) : activeSection === "antigravity-provider" ||
+          activeSection === "antigravity-agent" ||
+          activeSection === "antigravity-personalization" ? (
+          <AntigravitySettingsPanel
+            client={client}
+            section={
+              activeSection as
+                "antigravity-provider" | "antigravity-agent" | "antigravity-personalization"
+            }
           />
         ) : isClaudeSettingsSection(activeSection) ? (
           <ClaudeSettingsPanel client={client} section={activeSection} />

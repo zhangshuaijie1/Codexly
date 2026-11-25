@@ -36,17 +36,20 @@ const icons = { skills: Blocks, mcp: Server, plugins: BadgeCheck };
 
 export function ClaudeExtensionsPane({
   client,
+  engine = "claude",
   kind,
   projectId,
   t,
 }: Readonly<{
   client: ClaudeExtensionClient;
+  engine?: "claude" | "antigravity";
   kind: ClaudeExtensionKind;
   projectId?: string | undefined;
   t: ExtensionTranslate;
 }>) {
   const queryClient = useQueryClient();
-  const queryKey = ["extensions", "claude", kind, projectId ?? "global"];
+  const native = engine === "antigravity";
+  const queryKey = ["extensions", engine, kind, projectId ?? "global"];
   // 只查询当前栏目与范围；短期缓存和在途去重避免来回切换时反复启动官方 CLI。
   const result = useQuery({
     queryKey,
@@ -90,7 +93,7 @@ export function ClaudeExtensionsPane({
       await queryClient.cancelQueries({ queryKey });
       // 插件可能同时提供 Skills、MCP；相关缓存失效后，进入栏目才重新读取。
       void queryClient.invalidateQueries({
-        queryKey: ["extensions", "claude"],
+        queryKey: ["extensions", engine],
         refetchType: "none",
       });
       queryClient.setQueryData<ClaudeExtensionPage>(queryKey, (previous) =>
@@ -129,13 +132,17 @@ export function ClaudeExtensionsPane({
       (filter !== "available" || !item.installed),
   );
   const actionScope = (item: ClaudeExtension): ClaudeExtensionScope =>
-    kind === "skills"
-      ? projectId
-        ? "local"
+    native
+      ? item.scope === "project"
+        ? "project"
         : "user"
-      : ["project", "local"].includes(item.scope)
-        ? (item.scope as ClaudeExtensionScope)
-        : "user";
+      : kind === "skills"
+        ? projectId
+          ? "local"
+          : "user"
+        : ["project", "local"].includes(item.scope)
+          ? (item.scope as ClaudeExtensionScope)
+          : "user";
   return (
     <div className="skills-market-pane claude-extensions" aria-busy={loading}>
       <ExtensionCatalogToolbar
@@ -145,7 +152,7 @@ export function ClaudeExtensionsPane({
         loading={loading}
         onRefresh={() => void refresh()}
         t={t}
-        {...(kind === "plugins"
+        {...(kind === "plugins" && !native
           ? {
               filter,
               onFilter: setFilter,
@@ -191,12 +198,12 @@ export function ClaudeExtensionsPane({
                 (item.description || t("skillsMarket.center.officialCatalog"))
               }
               scopeLabel={t(
-                `skillsMarket.center.${item.scope === "user" ? "global" : item.scope === "project" ? "project" : item.scope === "local" ? "local" : "managed"}`,
+                `skillsMarket.center.${item.scope === "user" ? "global" : item.scope === "project" ? "project" : item.scope === "local" ? "local" : native ? "antigravityManaged" : "managed"}`,
               )}
               version={item.version}
               actions={
                 <>
-                  {kind === "plugins" && !item.installed ? (
+                  {kind === "plugins" && !item.installed && !native ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -222,10 +229,12 @@ export function ClaudeExtensionsPane({
                   {item.installed && item.mutable ? (
                     <ExtensionToggle
                       checked={item.enabled}
-                      disabled={pendingIds.has(item.id) || (kind === "mcp" && !projectId)}
+                      disabled={
+                        pendingIds.has(item.id) || (!native && kind === "mcp" && !projectId)
+                      }
                       label={t("skillsMarket.toggle", { name: item.name })}
                       hint={t(
-                        kind === "mcp" && !projectId
+                        !native && kind === "mcp" && !projectId
                           ? "skillsMarket.center.selectProject"
                           : "skillsMarket.toggle",
                         { name: item.name },
@@ -240,7 +249,7 @@ export function ClaudeExtensionsPane({
                       }
                     />
                   ) : null}
-                  {kind === "plugins" && item.installed && item.mutable ? (
+                  {kind === "plugins" && item.installed && item.mutable && !native ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -264,7 +273,7 @@ export function ClaudeExtensionsPane({
                       <TooltipContent>{t("skillsMarket.center.update")}</TooltipContent>
                     </Tooltip>
                   ) : null}
-                  {item.installed && item.mutable && kind !== "skills" ? (
+                  {item.installed && item.mutable && kind !== "skills" && !native ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -298,8 +307,16 @@ export function ClaudeExtensionsPane({
                 : `skillsMarket.${kind === "skills" ? "emptyInstalled" : kind === "mcp" ? "emptyMcp" : "emptyPlugins"}`,
             )}
           </h4>
-          <p>{t(query ? "skillsMarket.center.searchHint" : `skillsMarket.center.empty${kind}`)}</p>
-          {kind === "plugins" ? (
+          <p>
+            {t(
+              query
+                ? "skillsMarket.center.searchHint"
+                : native
+                  ? "skillsMarket.resourceEmptyHint"
+                  : `skillsMarket.center.empty${kind}`,
+            )}
+          </p>
+          {kind === "plugins" && !native ? (
             <Button
               variant="outline"
               disabled={pendingIds.has("claude-plugins-official")}

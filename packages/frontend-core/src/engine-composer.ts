@@ -10,7 +10,7 @@ export function resolveComposerEngine(
   taskId: string | undefined,
   task: Readonly<{ engine?: AgentEngine }> | undefined,
   draftEngine: AgentEngine,
-  configured?: Readonly<Record<AgentEngine, boolean>>,
+  configured?: Readonly<Partial<Record<AgentEngine, boolean>>>,
   preserveDraftEngine = false,
 ): AgentEngine {
   // 历史任务缺少字段表示旧版 Codex；不能让当前草稿选择污染历史归属。
@@ -18,9 +18,14 @@ export function resolveComposerEngine(
   // 已保存的计划只恢复自己的引擎；配置暂不可用也不能静默改写执行目标。
   if (preserveDraftEngine) return draftEngine;
   // 单引擎配置优先于草稿记忆，避免卸载配置后仍将新消息发往失效的引擎。
-  if (configured !== undefined && !(configured.codex && configured.claude)) {
-    return configured.claude ? "claude" : "codex";
-  }
+  if (configured !== undefined && !configured[draftEngine])
+    return configured.codex
+      ? "codex"
+      : configured.claude
+        ? "claude"
+        : configured.antigravity
+          ? "antigravity"
+          : "codex";
   return draftEngine;
 }
 

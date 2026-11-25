@@ -28,6 +28,7 @@ import { WorkbenchComposerView } from "./workbench-composer-view.js";
 export function WorkbenchComposerBase({
   engineControls,
   engineCommands,
+  onOpenResume,
   composerRef,
   capabilities,
   captureSubmitVisible = true,
@@ -230,6 +231,7 @@ export function WorkbenchComposerBase({
     onSteerAccepted: composerQueue.onSteerAccepted,
     onRequestNotificationPermission,
     onTaskCreated,
+    onOpenResume,
     onTaskStarted,
     onTurnStarted,
     pendingTask,
@@ -268,6 +270,7 @@ export function WorkbenchComposerBase({
     client,
     onRequestNotificationPermission,
     onTaskCreated,
+    onOpenResume,
     onTaskStarted,
     projectId,
     session,

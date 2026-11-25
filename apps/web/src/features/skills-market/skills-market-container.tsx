@@ -37,6 +37,11 @@ export function SkillsMarketContainer({
   return (
     <ExtensionCenter
       client={client}
+      antigravityClient={{
+        listClaudeExtensions: (kind, project) => client.listAntigravityExtensions(kind, project),
+        mutateClaudeExtension: (input, project) =>
+          client.mutateAntigravityExtension(input, project),
+      }}
       projects={projects}
       section={activeSection}
       onSectionChange={selectSection}

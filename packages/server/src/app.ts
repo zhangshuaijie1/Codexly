@@ -261,11 +261,11 @@ export async function createCodexlyServer(
     release: (projectId) => releaseProjectContext(projectId, true),
   });
   const listModels = async (
-    engine: "codex" | "claude" = "codex",
+    engine: import("@codexly/protocol").AgentEngine = "codex",
   ): Promise<readonly AgentModel[]> => {
     if (engine === "codex") return (await modelCatalogCache.read()).data;
     const service = options.provider.engines?.[engine];
-    if (!service) throw new Error("Claude engine is unavailable");
+    if (!service) throw new Error(`${engine} engine is unavailable`);
     return (await service.inspect()).models.data;
   };
   const readEffectiveGlobalSettings = async (
@@ -328,6 +328,19 @@ export async function createCodexlyServer(
     const metadata = await (
       await getProjectContext(projectId)
     )?.provider.readTaskMetadata?.(taskId);
+    if (metadata?.engine === "antigravity") {
+      if (stored?.engineOptions?.engine === "antigravity") return stored;
+      const defaults = (await options.provider.engines?.antigravity?.inspect())
+        ?.antigravityDefaults;
+      return {
+        model: defaults?.model ?? "",
+        reasoningEffort: defaults?.reasoningEffort ?? "",
+        approvalPolicy: "on-request",
+        approvalsReviewer: "user",
+        sandboxMode: "workspace-write",
+        engineOptions: { engine: "antigravity" },
+      };
+    }
     if (metadata?.engine === "claude") {
       // Claude 设置只取自身会话或目录，绝不继承 Codex 全局模型、沙盒和 Guardian。
       if (stored?.engineOptions?.engine === "claude") return stored;

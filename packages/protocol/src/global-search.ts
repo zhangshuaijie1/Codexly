@@ -1,6 +1,7 @@
 import { Type, type Static } from "@sinclair/typebox";
 
 import { AgentTaskSchema } from "./agent-attachments.js";
+import { AgentEngineSchema } from "./agent-engine.js";
 
 export const GlobalSearchKindSchema = Type.Union([Type.Literal("tasks"), Type.Literal("history")]);
 export type GlobalSearchKind = Static<typeof GlobalSearchKindSchema>;
@@ -9,7 +10,15 @@ export const TaskSearchQuerySchema = Type.Object(
   {
     archived: Type.Boolean(),
     engines: Type.Optional(
-      Type.Union([Type.Literal("codex"), Type.Literal("claude"), Type.Literal("codex,claude")]),
+      Type.Union([
+        Type.Literal("codex"),
+        Type.Literal("claude"),
+        Type.Literal("codex,claude"),
+        Type.Literal("antigravity"),
+        Type.Literal("codex,antigravity"),
+        Type.Literal("claude,antigravity"),
+        Type.Literal("codex,claude,antigravity"),
+      ]),
     ),
     cursor: Type.Optional(Type.String({ maxLength: 8_192, minLength: 1 })),
     kind: GlobalSearchKindSchema,
@@ -60,8 +69,8 @@ export type SearchOccurrencesPage = Readonly<Static<typeof SearchOccurrencesPage
 export const TaskSearchPageSchema = Type.Object(
   {
     unavailableEngines: Type.Optional(
-      Type.Array(Type.Union([Type.Literal("codex"), Type.Literal("claude")]), {
-        maxItems: 2,
+      Type.Array(AgentEngineSchema, {
+        maxItems: 3,
         uniqueItems: true,
       }),
     ),

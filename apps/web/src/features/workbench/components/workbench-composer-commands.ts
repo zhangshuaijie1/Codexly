@@ -20,6 +20,7 @@ type ComposerCommandOptions = Readonly<{
   client: CodexlyMutationClient;
   onRequestNotificationPermission: () => void;
   onTaskCreated: WorkbenchComposerProps["onTaskCreated"];
+  onOpenResume?: WorkbenchComposerProps["onOpenResume"];
   onTaskStarted: WorkbenchComposerProps["onTaskStarted"];
   projectId: string;
   session: ReturnType<typeof useComposerSession>;
@@ -33,6 +34,7 @@ export function createComposerCommands({
   client,
   onRequestNotificationPermission,
   onTaskCreated,
+  onOpenResume,
   onTaskStarted,
   projectId,
   session,
@@ -92,6 +94,16 @@ export function createComposerCommands({
   const executePromptCommand = async (command: PromptCommandItem) => {
     const requestScope = routeScope;
     if (!getCommandAvailability(command).available) {
+      return;
+    }
+    if (onOpenResume && command.action === "native" && command.command === "resume") {
+      const range = commandSlashCommand;
+      if (range)
+        replacePromptContent(
+          removePromptSlashCommand(skillEditorRef.current?.getContent() ?? promptContent, range),
+        );
+      closeCommandMenu();
+      onOpenResume();
       return;
     }
     if (command.action === "saved-prompt" || (command.action === "native" && command.command)) {

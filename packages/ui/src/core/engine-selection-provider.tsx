@@ -12,10 +12,12 @@ import {
 /** 启用状态随设置更新即时广播，保持子树身份，避免重挂载正在运行的聊天。 */
 export function EngineSelectionProvider({
   engines,
+  additionalEngine,
   storage = browserSetupStorage,
   children,
 }: Readonly<{
   engines: readonly AgentEngine[];
+  additionalEngine?: AgentEngine | undefined;
   storage?: SetupStorage;
   children: ReactNode;
 }>) {
@@ -31,7 +33,15 @@ export function EngineSelectionProvider({
   );
   return (
     <EngineActivationContext value={activation}>
-      <SelectedEnginesContext value={snapshot.engines}>{children}</SelectedEnginesContext>
+      <SelectedEnginesContext
+        value={
+          additionalEngine && !snapshot.engines.includes(additionalEngine)
+            ? [...snapshot.engines, additionalEngine]
+            : snapshot.engines
+        }
+      >
+        {children}
+      </SelectedEnginesContext>
     </EngineActivationContext>
   );
 }

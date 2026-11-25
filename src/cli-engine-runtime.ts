@@ -13,6 +13,7 @@ import {
   type LocalCatalogStore,
 } from "@codexly/core";
 import { ClaudeRuntime } from "@codexly/provider-claude";
+import { AntigravityRuntime } from "./antigravity-runtime.js";
 
 /** 项目事件订阅不创建 Codex Provider，避免其 Git watch 在 Claude 首屏启动进程。 */
 function deferCodexProject(create: () => AgentProvider) {
@@ -60,12 +61,14 @@ function deferCodexProject(create: () => AgentProvider) {
   return { provider, current: () => current };
 }
 
-/** 仅生产本地仓储启用双引擎；搜索按任务持久身份选择依赖，不探测无关引擎。 */
+/** 本地仓储按任务持久身份选择执行引擎。 */
 export function enableClaudeRuntime(
   codex: AgentRuntimeProvider,
   store: unknown,
   codexHome: string,
   appDataDirectory = appStorageDirectory(),
+  antigravityEnvironment = { ...process.env },
+  antigravityWorkspaceRoots: readonly string[] = [],
 ): AgentRuntimeProvider {
   if (
     !store ||
@@ -76,6 +79,12 @@ export function enableClaudeRuntime(
     return codex;
   const catalog = store as LocalCatalogStore;
   const claude = new ClaudeRuntime(join(appDataDirectory, "engines", "claude"), catalog);
+  const antigravity = new AntigravityRuntime(
+    join(appDataDirectory, "engines", "antigravity"),
+    catalog,
+    antigravityEnvironment,
+    antigravityWorkspaceRoots,
+  );
   const generation = async (cwd: string, text: string, signal: AbortSignal) => {
     const preferences =
       "readGlobalSettings" in store && typeof store.readGlobalSettings === "function"
@@ -117,6 +126,7 @@ export function enableClaudeRuntime(
       codex: deferred.provider,
       // 项目路由长期缓存；执行与订阅必须按需解析，不能固定持有已回收的适配器。
       claude: () => claude.forScope(scope),
+      antigravity: () => antigravity.forScope(scope),
     });
     projects.set(scope.id, { router, codex: deferred });
     return router;
@@ -130,7 +140,7 @@ export function enableClaudeRuntime(
         },
         stored,
       ),
-    engines: { ...codex.engines, claude },
+    engines: { ...codex.engines, claude, antigravity: antigravity.service() },
     search: new CatalogSearchService(catalog, (task, input, signal, limit) => {
       const scope =
         task.projectId === null
@@ -138,6 +148,14 @@ export function enableClaudeRuntime(
           : { id: task.projectId, kind: "project" as const };
       if (task.provider === "claude")
         return claude.searchTaskOccurrences(task.id, input, scope, signal, limit);
+      if (task.provider === "antigravity")
+        return antigravity.search(
+          { ...scope, rootPath: task.cwd, runtimeWorkspaceRoots: [task.cwd] },
+          task.id,
+          input,
+          signal,
+          limit,
+        );
       if (task.provider !== "codex" || !codex.search)
         throw new Error("Task search engine is unavailable");
       return codex.search.searchTaskOccurrences(task.id, input, scope, signal, limit);
@@ -167,6 +185,7 @@ export function enableClaudeRuntime(
       const current = existing?.codex.current();
       if (current) await codex.releaseProject(projectId, current);
       claude.release(projectId);
+      antigravity.release(projectId);
       projects.delete(projectId);
     },
   };

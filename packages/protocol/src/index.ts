@@ -490,6 +490,8 @@ export * from "./completed-task-query.js";
 export * from "./project-text-file.js";
 export { WorkbenchChangeSchema, type WorkbenchChange } from "./workbench-change.js";
 export * from "./agent-engine.js";
+export * from "./antigravity-history.js";
+export * from "./antigravity-config.js";
 export * from "./engine-profile.js";
 export * from "./claude-extensions.js";
 export { AgentThreadConfigurationSchema } from "./agent-attachments.js";

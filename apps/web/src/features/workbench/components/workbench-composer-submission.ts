@@ -51,6 +51,7 @@ type ComposerSubmissionOptions = Readonly<{
   onDirectSubmission: WorkbenchComposerProps["onDirectSubmission"];
   onSubmissionFailed?: WorkbenchComposerProps["onSubmissionFailed"];
   onCaptureSubmission?: WorkbenchComposerProps["onCaptureSubmission"];
+  onOpenResume?: WorkbenchComposerProps["onOpenResume"];
   onRequestNotificationPermission: () => void;
   onTaskCreated: WorkbenchComposerProps["onTaskCreated"];
   onTaskStarted: WorkbenchComposerProps["onTaskStarted"];
@@ -90,6 +91,7 @@ export function createComposerSubmission({
   onDirectSubmission,
   onSubmissionFailed,
   onCaptureSubmission,
+  onOpenResume,
   onRequestNotificationPermission,
   onTaskCreated,
   onTaskStarted,
@@ -142,6 +144,17 @@ export function createComposerSubmission({
     const livePromptSubmission =
       promptSkills === undefined ? toPromptSkillSubmission(livePromptContent) : undefined;
     const text = (livePromptSubmission?.text ?? message.text).trim();
+    if (
+      text === "/resume" &&
+      onOpenResume &&
+      !message.files.length &&
+      !livePromptSubmission?.skills.length
+    ) {
+      if (state === "running" || turnControlsDisabled) return false;
+      clearComposerInput();
+      onOpenResume();
+      return true;
+    }
     const requestedComposerMode =
       options.composerMode === null ? undefined : (options.composerMode ?? composerMode);
     if (requestedComposerMode === "goal" && (text.length === 0 || text.length > 4_000)) {

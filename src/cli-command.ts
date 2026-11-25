@@ -154,10 +154,9 @@ export async function runStart(
   managed?: Pick<ManagedStartContext, "options" | "environment" | "background" | "onReady">,
 ): Promise<number> {
   const applicationDirectory = dependencies.appDataDirectory ?? appStorageDirectory();
-  const networkProxy = await initializeNetworkProxy(
-    applicationDirectory,
-    managed?.environment ?? process.env,
-  );
+  // Antigravity 沿用启动终端的网络环境和原生凭据。
+  const terminalEnvironment = { ...(managed?.environment ?? process.env) };
+  const networkProxy = await initializeNetworkProxy(applicationDirectory, terminalEnvironment);
   const environment = networkProxy.env;
   try {
     // 托管实例只使用已保存的参数，避免登录环境里的 CODEXLY_* 改变服务行为。
@@ -274,6 +273,8 @@ export async function runStart(
         stateRepository,
         codexHome,
         applicationDirectory,
+        terminalEnvironment,
+        options.workspaceRoots,
       );
       const petProvider = dependencies.createPetProvider({ codexHome });
       const appUpdateService = createAppUpdateService({

@@ -5,6 +5,7 @@ import type {
   TaskSearchPage,
   TaskSearchQuery,
 } from "@codexly/protocol";
+import { isAgentEngine } from "@codexly/protocol";
 import type {
   AgentCancellationSignal,
   AgentSearchProvider,
@@ -79,7 +80,7 @@ export class CatalogSearchService implements AgentSearchProvider {
       archived: input.archived,
       ...(input.engines === undefined
         ? {}
-        : { providers: input.engines.split(",") as ("codex" | "claude")[] }),
+        : { providers: input.engines.split(",").filter(isAgentEngine) }),
       limit: input.kind === "history" ? 10 : 30,
       ...(cursor === undefined ? {} : { cursor }),
       ...(input.kind === "tasks" ? { searchTerm: query } : {}),
@@ -99,7 +100,7 @@ export class CatalogSearchService implements AgentSearchProvider {
             )
           )
             continue;
-          if (task.provider !== "codex" && task.provider !== "claude") continue;
+          if (!isAgentEngine(task.provider)) continue;
           const metadata = localTaskMetadata(task);
           if (input.kind === "tasks") {
             data[index] = { task: metadata, snippet: "" };

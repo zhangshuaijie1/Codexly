@@ -5,7 +5,8 @@ import { useSelectedEngines } from "./engine-selection.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select.js";
 
 const defaults = { codex: "gpt-6-luna", claude: "haiku" } as const;
-const fallbackEngines: readonly AgentEngine[] = ["codex"];
+type GenerationEngine = keyof typeof defaults;
+const fallbackEngines: readonly GenerationEngine[] = ["codex"];
 
 /** 两端共用应用生成设置；只加载所选引擎的目录，不轮询、不逐模型探测。 */
 export function DefaultGenerationSettings({
@@ -16,13 +17,13 @@ export function DefaultGenerationSettings({
 }: Readonly<{
   settings: Pick<AgentGlobalSettings, "defaultAgent" | "defaultModel">;
   language: string;
-  getModels: (engine: AgentEngine) => Promise<readonly AgentModel[]>;
+  getModels: (engine: GenerationEngine) => Promise<readonly AgentModel[]>;
   onChange: (patch: { defaultAgent: AgentEngine; defaultModel: string }) => void;
 }>) {
-  const engines = useSelectedEngines() ?? fallbackEngines;
-  const engine = engines.includes(settings.defaultAgent ?? "codex")
-    ? (settings.defaultAgent ?? "codex")
-    : (engines[0] ?? "codex");
+  const engines =
+    useSelectedEngines()?.filter((value) => value !== "antigravity") ?? fallbackEngines;
+  const engine =
+    engines.find((value) => value === (settings.defaultAgent ?? "codex")) ?? engines[0] ?? "codex";
   const configuredModel =
     (settings.defaultAgent ?? "codex") === engine ? settings.defaultModel : defaults[engine];
   // Claude 的旧自定义值回落 Haiku，防止辅助生成的选择器重新补回已过滤的模型。
@@ -32,6 +33,7 @@ export function DefaultGenerationSettings({
       : configuredModel;
   const [catalog, setCatalog] = useState<{ engine: AgentEngine; models: readonly AgentModel[] }>();
   useEffect(() => {
+    if (!engines.length) return;
     let active = true;
     void getModels(engine)
       .then((models) => {
@@ -43,12 +45,13 @@ export function DefaultGenerationSettings({
     return () => {
       active = false;
     };
-  }, [engine, getModels]);
+  }, [engine, engines.length, getModels]);
   // 单引擎安装自动持久化其默认值，后端生成不再依赖当前聊天的引擎。
   useEffect(() => {
-    if (settings.defaultAgent !== engine || settings.defaultModel !== model)
+    if (engines.length && (settings.defaultAgent !== engine || settings.defaultModel !== model))
       onChange({ defaultAgent: engine, defaultModel: model });
-  }, [engine, model, settings.defaultAgent, settings.defaultModel, onChange]);
+  }, [engine, engines.length, model, settings.defaultAgent, settings.defaultModel, onChange]);
+  if (!engines.length) return null;
   const zh = language.startsWith("zh");
   const models = catalog?.engine === engine ? catalog.models : [];
   const choices =
@@ -69,7 +72,7 @@ export function DefaultGenerationSettings({
           <Select
             value={engine}
             onValueChange={(value) => {
-              const defaultAgent = value as AgentEngine;
+              const defaultAgent = value as GenerationEngine;
               onChange({ defaultAgent, defaultModel: defaults[defaultAgent] });
             }}
           >

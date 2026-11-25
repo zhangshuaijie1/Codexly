@@ -14,9 +14,18 @@ import {
 import { settingsSections, type SettingsSectionId } from "./global-settings-fields.js";
 
 import {
-  settingsSectionGroups as sectionGroups,
+  settingsSectionGroups,
   settingsSectionSearchKeys as sectionSearchKeys,
 } from "@codexly/frontend-core/settings-navigation";
+
+const sectionGroups = [
+  ...settingsSectionGroups.slice(0, -1),
+  {
+    id: "antigravity",
+    sections: ["antigravity-provider", "antigravity-agent", "antigravity-personalization"],
+  },
+  ...settingsSectionGroups.slice(-1),
+] as const satisfies readonly { id: string; sections: readonly SettingsSectionId[] }[];
 
 export function SettingsPageFrame({
   activeSection,
@@ -36,7 +45,9 @@ export function SettingsPageFrame({
   const backRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLElement>(null);
-  const engine = settingsSectionEngine(activeSection);
+  const engine = activeSection.startsWith("antigravity-")
+    ? undefined
+    : settingsSectionEngine(activeSection as Exclude<SettingsSectionId, `antigravity-${string}`>);
   const query = search.trim().toLocaleLowerCase();
   const matches = settingsSections
     .filter(({ id }) => id !== "access" || accessMode === "lan")
@@ -47,7 +58,11 @@ export function SettingsPageFrame({
           .filter((group) => group.sections.some((section) => section === id))
           .map((group) => t(`groups.${group.id}`)),
         t(`sectionKeywords.${id}`),
-        ...sectionSearchKeys[id].map((key) => t(key)),
+        ...(id.startsWith("antigravity-")
+          ? []
+          : sectionSearchKeys[id as Exclude<SettingsSectionId, `antigravity-${string}`>].map(
+              (key) => t(key),
+            )),
       ].some((label) => label.toLocaleLowerCase().includes(query)),
     );
 

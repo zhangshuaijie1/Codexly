@@ -200,8 +200,8 @@ export async function startPromptTurn(
     {
       type: "prompt",
       ...(options.workspacePath === undefined ? {} : { workspacePath: options.workspacePath }),
-      ...(options.turnOptions.engineOptions?.engine === "claude"
-        ? { engine: "claude" as const }
+      ...(options.turnOptions.engineOptions
+        ? { engine: options.turnOptions.engineOptions.engine }
         : {}),
       ...(options.taskId === undefined ? {} : { taskId: options.taskId }),
       input: options.input,

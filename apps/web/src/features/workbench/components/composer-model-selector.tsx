@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../shared/components/core/dropdown-menu.js";
 import { resolveReasoningEffort } from "../composer-state.js";
+import { ModelMenuOptions } from "./model-menu-options.js";
 
 type ComposerModelSelectorProps = Readonly<{
   control?: "model" | "reasoning";
@@ -132,21 +133,19 @@ export function ComposerModelSelector({
           <DropdownMenuContent
             align="end"
             aria-label={t("composer.modelSelect")}
-            className="w-40 max-w-[calc(100vw-1rem)]"
+            className={
+              activeSettings.engineOptions?.engine === "antigravity"
+                ? "w-max min-w-40 max-w-[calc(100vw-1rem)]"
+                : "w-40 max-w-[calc(100vw-1rem)]"
+            }
             side="top"
           >
-            <DropdownMenuRadioGroup
-              onValueChange={selectModel}
-              {...(selectedModel === undefined ? {} : { value: selectedModel.id })}
-            >
-              {models.map((model) => (
-                <DropdownMenuRadioItem indicator="check" key={model.id} value={model.id}>
-                  <span className="min-w-0 truncate" title={model.displayName}>
-                    {model.displayName}
-                  </span>
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
+            <ModelMenuOptions
+              models={models}
+              selection={selectedModel?.id ?? ""}
+              groupPlanners={activeSettings.engineOptions?.engine === "antigravity"}
+              onSelect={selectModel}
+            />
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
